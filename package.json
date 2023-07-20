@@ -1,0 +1,19 @@
+{
+  "name": "anme-core",
+  "version": "1.0.0",
+  "description": "NFT Avatar Platform for users to create personalized PPF Avatar NFT",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com-personal:MahithChigurupati/ANME-CORE.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "hardhat": "^2.17.0"
+  }
+}
