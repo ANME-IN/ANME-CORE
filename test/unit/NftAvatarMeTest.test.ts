@@ -1,7 +1,11 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers"
 import { assert, expect } from "chai"
 import { network, deployments, ethers } from "hardhat"
-import { developmentChains, networkConfig } from "../../helper-hardhat-config"
+import {
+    INITIAL_PRICE,
+    developmentChains,
+    networkConfig,
+} from "../../helper-hardhat-config"
 import {
     AvatarNftMe,
     MockV3Aggregator,
@@ -146,6 +150,9 @@ import {
                   "An NFT that represents the Avatar of " + FIRST_NAME
 
               const MINT_FEE = ethers.parseEther("0.1")
+              const LOW_MINT_FEE = ethers.parseEther("0.00000000000000001")
+              const UNSUPPORTED_TOKEN_ADDRESS =
+                  "0xdD2FD4581271e230360230F9337D5c0430Bf44C0"
 
               it("mint an NFT with native chain currency", async () => {
                   const tokenCounter = await avatarNftMe.getTokenCounter()
@@ -264,12 +271,220 @@ import {
                   const owner = await avatarNftMe.ownerOf(tokenCounter)
                   assert(owner, deployer.address)
               })
+
+              it("Revert due to insufficient eth sent as minting fee", async () => {
+                  const response = avatarNftMe.formTokenUriAndMint(
+                      FIRST_NAME,
+                      LAST_NAME,
+                      WEBSITE,
+                      BODY_TYPE,
+                      OUTFIT_GENDER,
+                      SKIN_TONE,
+                      CREATED_AT,
+                      IMAGE_URI,
+                      { value: LOW_MINT_FEE }
+                  )
+                  await expect(response).to.be.revertedWithCustomError(
+                      avatarNftMe,
+                      "AvatarNftMe__NeedMoreETHSent"
+                  )
+              })
+
+              it("Revert due to insufficient tokens sent as minting fee", async () => {
+                  await wethTokenAddress.mint(deployer.address, LOW_MINT_FEE)
+                  await wethTokenAddress.approve(avatarNftMe, LOW_MINT_FEE)
+
+                  const response = avatarNftMe.formTokenUriAndMintWithToken(
+                      wethTokenAddress,
+                      LOW_MINT_FEE,
+                      FIRST_NAME,
+                      LAST_NAME,
+                      WEBSITE,
+                      BODY_TYPE,
+                      OUTFIT_GENDER,
+                      SKIN_TONE,
+                      CREATED_AT,
+                      IMAGE_URI
+                  )
+                  await expect(response).to.be.revertedWithCustomError(
+                      avatarNftMe,
+                      "AvatarNftMe__NeedMoreETHSent"
+                  )
+              })
+
+              it("Revert due to no balance & no allowance of tokens", async () => {
+                  const response = avatarNftMe.formTokenUriAndMintWithToken(
+                      wethTokenAddress,
+                      MINT_FEE,
+                      FIRST_NAME,
+                      LAST_NAME,
+                      WEBSITE,
+                      BODY_TYPE,
+                      OUTFIT_GENDER,
+                      SKIN_TONE,
+                      CREATED_AT,
+                      IMAGE_URI
+                  )
+                  await expect(response).to.be.revertedWith(
+                      "ERC20: insufficient allowance"
+                  )
+              })
+
+              it("Revert due to insufficient tokens and no allowance", async () => {
+                  await wethTokenAddress.mint(deployer.address, LOW_MINT_FEE)
+
+                  const response = avatarNftMe.formTokenUriAndMintWithToken(
+                      wethTokenAddress,
+                      MINT_FEE,
+                      FIRST_NAME,
+                      LAST_NAME,
+                      WEBSITE,
+                      BODY_TYPE,
+                      OUTFIT_GENDER,
+                      SKIN_TONE,
+                      CREATED_AT,
+                      IMAGE_URI
+                  )
+                  await expect(response).to.be.revertedWith(
+                      "ERC20: insufficient allowance"
+                  )
+              })
+
+              it("Revert due to sufficient tokens but no allowance", async () => {
+                  await wethTokenAddress.mint(deployer.address, MINT_FEE)
+
+                  const response = avatarNftMe.formTokenUriAndMintWithToken(
+                      wethTokenAddress,
+                      MINT_FEE,
+                      FIRST_NAME,
+                      LAST_NAME,
+                      WEBSITE,
+                      BODY_TYPE,
+                      OUTFIT_GENDER,
+                      SKIN_TONE,
+                      CREATED_AT,
+                      IMAGE_URI
+                  )
+                  await expect(response).to.be.revertedWith(
+                      "ERC20: insufficient allowance"
+                  )
+              })
+
+              it("Revert due to only having few tokens and complete allowance but low balance", async () => {
+                  await wethTokenAddress.mint(deployer.address, LOW_MINT_FEE)
+                  await wethTokenAddress.approve(avatarNftMe, MINT_FEE)
+
+                  const response = avatarNftMe.formTokenUriAndMintWithToken(
+                      wethTokenAddress,
+                      MINT_FEE,
+                      FIRST_NAME,
+                      LAST_NAME,
+                      WEBSITE,
+                      BODY_TYPE,
+                      OUTFIT_GENDER,
+                      SKIN_TONE,
+                      CREATED_AT,
+                      IMAGE_URI
+                  )
+                  await expect(response).to.be.revertedWith(
+                      "ERC20: transfer amount exceeds balance"
+                  )
+              })
+
+              it("Revert due to zero number of tokens sent", async () => {
+                  const response = avatarNftMe.formTokenUriAndMintWithToken(
+                      wethTokenAddress,
+                      0,
+                      FIRST_NAME,
+                      LAST_NAME,
+                      WEBSITE,
+                      BODY_TYPE,
+                      OUTFIT_GENDER,
+                      SKIN_TONE,
+                      CREATED_AT,
+                      IMAGE_URI
+                  )
+                  await expect(response).to.be.revertedWithCustomError(
+                      avatarNftMe,
+                      "NftAvatarMe__NeedsMoreThanZero"
+                  )
+              })
+
+              it("Revert due to unsupported token address", async () => {
+                  const response = avatarNftMe.formTokenUriAndMintWithToken(
+                      UNSUPPORTED_TOKEN_ADDRESS,
+                      MINT_FEE,
+                      FIRST_NAME,
+                      LAST_NAME,
+                      WEBSITE,
+                      BODY_TYPE,
+                      OUTFIT_GENDER,
+                      SKIN_TONE,
+                      CREATED_AT,
+                      IMAGE_URI
+                  )
+                  await expect(response).to.be.revertedWithCustomError(
+                      avatarNftMe,
+                      "NftAvatarMe__TokenNotAllowed"
+                  )
+              })
           })
 
-          it("sets the token price feed correctly", async () => {
-              const response = await avatarNftMe.getTokenPriceFeed(
-                  wethTokenAddress
-              )
-              assert.equal(response, mockV3Aggregator.target)
+          describe("Miscellaneous ", function () {
+              it("add support for a new token", async () => {
+                  const dummyToken =
+                      "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E"
+                  const dummyTokenPriceFeed =
+                      "0xdD2FD4581271e230360230F9337D5c0430Bf44C0"
+                  const response = await avatarNftMe.addTokenSupport(
+                      dummyToken,
+                      dummyTokenPriceFeed
+                  )
+
+                  const addedTokenPriceFeed =
+                      await avatarNftMe.getTokenPriceFeed(dummyToken)
+                  assert.equal(addedTokenPriceFeed, dummyTokenPriceFeed)
+              })
+
+              it("check price increment with increment threshold", async () => {})
+          })
+
+          describe("view", function () {
+              const INITIAL_COST = ethers.parseEther("50000000000000000000")
+              const INCREMENT_THRESHOLD = ethers.parseEther("50")
+
+              it("get initial price", async () => {
+                  const response = await avatarNftMe.getInitialPrice()
+                  assert.equal(response, INITIAL_COST)
+              })
+
+              it("get increment threshold", async () => {
+                  const response = await avatarNftMe.getIncrementThreshold()
+                  assert.equal(response, INCREMENT_THRESHOLD)
+              })
+
+              //   it("get mint fee", async () => {
+              //       const response = await avatarNftMe.getMintFee()
+              //       assert.equal(response, INCREMENT_THRESHOLD)
+              //   })
+
+              it("get eth price from usd", async () => {
+                  const ETH_PRICE = ethers.parseEther("50")
+                  const response = await avatarNftMe.getEthPriceFromUsd()
+                  assert.equal(response, ETH_PRICE)
+              })
+
+              it("get token price from USD", async () => {
+                  const TOKEN_ADDRESS =
+                      "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984"
+                  const TOKEN_PRICE = ethers.parseEther("50")
+                  const response = await avatarNftMe.getTokenPriceFromUsd(
+                      TOKEN_ADDRESS
+                  )
+                  assert.equal(response, TOKEN_PRICE)
+              })
           })
       })
+
+// send with custom gas for call to fail
+// mint multiple NFTs to see price increment
