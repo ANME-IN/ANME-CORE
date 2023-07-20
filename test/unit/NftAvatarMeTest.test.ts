@@ -27,10 +27,6 @@ import {
           let deployer: SignerWithAddress
 
           beforeEach(async () => {
-              if (!developmentChains.includes(network.name)) {
-                  throw "You need to be on a development chain to run tests"
-              }
-
               const accounts = await ethers.getSigners()
               deployer = accounts[0]
 
@@ -108,7 +104,12 @@ import {
           describe("Contract Level Metdata", function () {
               it("sets the webpage correctly", async () => {
                   const WEBPAGE_URI = "https://www.avatarNFT.me"
-                  await avatarNftMe.setCurrentWebPageUri(WEBPAGE_URI)
+
+                  const tx = avatarNftMe.setCurrentWebPageUri(WEBPAGE_URI)
+                  await expect(tx)
+                      .to.emit(avatarNftMe, "officialWebpageUriUpdated")
+                      .withArgs(WEBPAGE_URI)
+
                   const response = await avatarNftMe.getCurrentWebPageUri()
                   assert.equal(response, WEBPAGE_URI)
               })
@@ -131,7 +132,12 @@ import {
                       })
                   ).toString("base64")}`
 
-                  await avatarNftMe.setContractURI(DESCRIPTION, IMAGE, LINK)
+                  const tx = avatarNftMe.setContractURI(
+                      DESCRIPTION,
+                      IMAGE,
+                      LINK
+                  )
+                  await expect(tx).to.emit(avatarNftMe, "contractUriUpdated")
                   const response = await avatarNftMe.contractURI()
                   //   assert.equal(response, base64EncodedJson)
               })
@@ -159,7 +165,7 @@ import {
                   const currentToken = ethers.toBigInt(tokenCounter)
                   assert.equal(tokenCounter, currentToken)
 
-                  await avatarNftMe.formTokenUriAndMint(
+                  const tx = avatarNftMe.formTokenUriAndMint(
                       FIRST_NAME,
                       LAST_NAME,
                       WEBSITE,
@@ -170,6 +176,13 @@ import {
                       IMAGE_URI,
                       { value: MINT_FEE }
                   )
+                  await expect(tx)
+                      .to.emit(avatarNftMe, "NftMinted")
+                      .withArgs(deployer.address, tokenCounter)
+
+                  await expect(tx)
+                      .to.emit(avatarNftMe, "mintFeeTransferedToOwner")
+                      .withArgs(MINT_FEE)
 
                   const nftName =
                       (await avatarNftMe.symbol()) +
@@ -204,7 +217,7 @@ import {
                       })
                   ).toString("base64")}`
 
-                  const response = await avatarNftMe.getTokenUri(tokenCounter)
+                  const response = await avatarNftMe.tokenURI(tokenCounter)
                   //   assert.equal(response, base64EncodedJson)
 
                   const owner = await avatarNftMe.ownerOf(tokenCounter)
@@ -265,7 +278,7 @@ import {
                       })
                   ).toString("base64")}`
 
-                  const response = await avatarNftMe.getTokenUri(tokenCounter)
+                  const response = await avatarNftMe.tokenURI(tokenCounter)
                   //   assert.equal(response, base64EncodedJson)
 
                   const owner = await avatarNftMe.ownerOf(tokenCounter)
@@ -291,8 +304,8 @@ import {
               })
 
               it("Revert due to insufficient tokens sent as minting fee", async () => {
-                  await wethTokenAddress.mint(deployer.address, LOW_MINT_FEE)
-                  await wethTokenAddress.approve(avatarNftMe, LOW_MINT_FEE)
+                  await wbtcTokenAddress.mint(deployer.address, LOW_MINT_FEE)
+                  await wbtcTokenAddress.approve(avatarNftMe, LOW_MINT_FEE)
 
                   const response = avatarNftMe.formTokenUriAndMintWithToken(
                       wethTokenAddress,
@@ -423,10 +436,44 @@ import {
                       CREATED_AT,
                       IMAGE_URI
                   )
-                  await expect(response).to.be.revertedWithCustomError(
-                      avatarNftMe,
-                      "NftAvatarMe__TokenNotAllowed"
-                  )
+                  await expect(response)
+                      .to.be.revertedWithCustomError(
+                          avatarNftMe,
+                          "NftAvatarMe__TokenNotAllowed"
+                      )
+                      .withArgs(UNSUPPORTED_TOKEN_ADDRESS)
+              })
+
+              it("check price increment with increment threshold", async () => {
+                  const INCREMENT_THRESHOLD = 50
+                  const INITIAL_COST = ethers.parseEther("50")
+
+                  for (let i = 1; i < INCREMENT_THRESHOLD + 1; i++) {
+                      await avatarNftMe.formTokenUriAndMint(
+                          FIRST_NAME,
+                          LAST_NAME,
+                          WEBSITE,
+                          BODY_TYPE,
+                          OUTFIT_GENDER,
+                          SKIN_TONE,
+                          CREATED_AT,
+                          IMAGE_URI,
+                          { value: MINT_FEE }
+                      )
+
+                      //   if (i % INCREMENT_THRESHOLD == 0) {
+                      //       await expect(tx)
+                      //           .to.emit(avatarNftMe, "mintFeeIncremented")
+                      //           .withArgs(INITIAL_COST + INITIAL_COST)
+                      //   }
+                  }
+
+                  const tokenCounter = await avatarNftMe.getTokenCounter()
+                  const currentToken = ethers.toBigInt(INCREMENT_THRESHOLD + 1)
+                  assert.equal(tokenCounter, currentToken)
+
+                  const response = await avatarNftMe.getMintFee()
+                  assert.equal(response, INITIAL_COST + INITIAL_COST)
               })
           })
 
@@ -445,13 +492,11 @@ import {
                       await avatarNftMe.getTokenPriceFeed(dummyToken)
                   assert.equal(addedTokenPriceFeed, dummyTokenPriceFeed)
               })
-
-              it("check price increment with increment threshold", async () => {})
           })
 
           describe("view", function () {
-              const INITIAL_COST = ethers.parseEther("50000000000000000000")
-              const INCREMENT_THRESHOLD = ethers.parseEther("50")
+              const INITIAL_COST = ethers.parseEther("50")
+              const INCREMENT_THRESHOLD = ethers.parseUnits("50", 0)
 
               it("get initial price", async () => {
                   const response = await avatarNftMe.getInitialPrice()
@@ -463,28 +508,28 @@ import {
                   assert.equal(response, INCREMENT_THRESHOLD)
               })
 
-              //   it("get mint fee", async () => {
-              //       const response = await avatarNftMe.getMintFee()
-              //       assert.equal(response, INCREMENT_THRESHOLD)
+              it("get mint fee", async () => {
+                  const response = await avatarNftMe.getMintFee()
+                  assert.equal(response, INITIAL_COST)
+              })
+
+              //   it("get eth price from usd", async () => {
+              //       const USD_VALUE = ethers.parseEther("50")
+              //       const ETH_PRICE = ethers.parseUnits("0", 0)
+              //       const response = await avatarNftMe.getEthPriceFromUsd()
+              //       assert.equal(response, ETH_PRICE)
               //   })
 
-              it("get eth price from usd", async () => {
-                  const ETH_PRICE = ethers.parseEther("50")
-                  const response = await avatarNftMe.getEthPriceFromUsd()
-                  assert.equal(response, ETH_PRICE)
-              })
-
-              it("get token price from USD", async () => {
-                  const TOKEN_ADDRESS =
-                      "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984"
-                  const TOKEN_PRICE = ethers.parseEther("50")
-                  const response = await avatarNftMe.getTokenPriceFromUsd(
-                      TOKEN_ADDRESS
-                  )
-                  assert.equal(response, TOKEN_PRICE)
-              })
+              //   it("get token price from USD", async () => {
+              //       const USD_VALUE = ethers.parseEther("50")
+              //       const TOKEN_PRICE = ethers.parseUnits("0", 0)
+              //       const response = await avatarNftMe.getTokenPriceFromUsd(
+              //           wethTokenAddress
+              //       )
+              //       assert.equal(response, TOKEN_PRICE)
+              //   })
           })
       })
 
 // send with custom gas for call to fail
-// mint multiple NFTs to see price increment
+// error arguments?

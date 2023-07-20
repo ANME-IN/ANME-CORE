@@ -42,7 +42,7 @@ const deployAvatarNftMe: DeployFunction = async function (
         const usdc = await deployments.get("MockUsdcToken")
         usdcTokenAddress = usdc.address
     } else {
-        ethUsdPriceFeedAddress = networkConfig[chainId].ethUsdPriceFeed!
+        ethUsdPriceFeedAddress = networkConfig[chainId].wethUsdPriceFeed!
         btcUsdPriceFeedAddress = networkConfig[chainId].wbtcUsdPriceFeed!
         usdcUsdPriceFeedAddress = networkConfig[chainId].usdcUsdPriceFeed!
 
