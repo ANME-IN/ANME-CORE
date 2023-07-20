@@ -31,9 +31,9 @@ export const networkConfig: networkConfigInfo = {
         usdc: "0x6aFb45bfa367ab2E4e55FAA2B1aDAb1bBC5E9A0F",
 
         // price feed from https://docs.chain.link/data-feeds/price-feeds/addresses
-        ethUsdPriceFeed: "0x694AA1769357215DE4FAC081bf1f309aDC325306",
         wethUsdPriceFeed: "0x694AA1769357215DE4FAC081bf1f309aDC325306",
         wbtcUsdPriceFeed: "0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43",
+        usdcUsdPriceFeed: "0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E",
         blockConfirmations: 6,
     },
     80001: {

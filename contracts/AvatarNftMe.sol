@@ -190,6 +190,7 @@ contract AvatarNftMe is ERC721, Ownable {
      * @param _webPageUri: webpage URL where UI is live
      */
     function setCurrentWebPageUri(string memory _webPageUri) external onlyOwner {
+        emit officialWebpageUriUpdated(_webPageUri);
         s_webPageUri = _webPageUri;
     }
 
@@ -474,14 +475,6 @@ contract AvatarNftMe is ERC721, Ownable {
      */
     function getMintFee() external view returns (uint256) {
         return s_mintFee;
-    }
-
-    /**
-     * a function to get the token URI of a token
-     * @param _tokenId: id of token to get the token URI
-     */
-    function getTokenUri(uint256 _tokenId) external view returns (string memory) {
-        return s_tokenIdToUri[_tokenId];
     }
 
     /**

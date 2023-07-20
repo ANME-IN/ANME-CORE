@@ -89,11 +89,4 @@ library OracleLib {
         // the actual ETH amount equivalent to the given USD amount.
         return ethAmount;
     }
-
-    /**
-     * function that returns TIMEOUT set to check whether data is stale
-     */
-    function getTimeout(AggregatorV3Interface /* chainlinkFeed */ ) internal pure returns (uint256) {
-        return TIMEOUT;
-    }
 }
