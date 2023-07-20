@@ -4,7 +4,7 @@ import { DeployFunction } from "hardhat-deploy/types"
 import {
     developmentChains,
     DECIMALS,
-    INITIAL_PRICE,
+    AGGREGATOR_INITIAL_PRICE,
 } from "../helper-hardhat-config"
 
 const deployMocks: DeployFunction = async function (
@@ -21,7 +21,7 @@ const deployMocks: DeployFunction = async function (
             contract: "MockV3Aggregator",
             from: deployer,
             log: true,
-            args: [DECIMALS, INITIAL_PRICE],
+            args: [DECIMALS, AGGREGATOR_INITIAL_PRICE],
         })
 
         await deploy("MockWethToken", {

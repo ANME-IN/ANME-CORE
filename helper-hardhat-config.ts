@@ -77,6 +77,14 @@ export const networkConfig: networkConfigInfo = {
     },
 }
 
-export const DECIMALS = "18"
-export const INITIAL_PRICE = "2000000000000000000000"
 export const developmentChains = ["hardhat", "localhost"]
+export const testnetChains = ["mumbai", "sepolia"]
+
+export const DECIMALS = "18"
+export const AGGREGATOR_INITIAL_PRICE = ethers.parseEther("2000")
+
+export const INITIAL_MINT_FEE = ethers.parseEther("50")
+export const SEND_MINT_FEE = ethers.parseEther("0.1")
+export const LOW_MINT_FEE = ethers.parseEther("0.000000000000000001")
+export const INCREMENT_THRESHOLD = ethers.parseUnits("50", 0)
+export const ONE = ethers.parseUnits("1", 0)
